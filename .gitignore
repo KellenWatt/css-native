@@ -1,0 +1,17 @@
+# Ruby-specific
+*.gem
+
+# Generic text and shell files for testing
+# use ! patterns to whitelist exceptions, if any
+*.sh
+*.txt
+# File generated for testing, because I'm terribly original
+file.*
+
+# Vim swapfiles
+*.swp
+*.swo
+
+# Custom backup format
+.*.*
+
