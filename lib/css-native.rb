@@ -1,3 +1,4 @@
+require "css-native/errors"
 class CSSNative
   private_class_method :new
   def self.stylesheet(&block)
@@ -59,40 +60,6 @@ class CSSNative
   end
 
   private
-
-  class CSSError < StandardError
-  end
-  class RuleError < CSSError
-  end
-  class GrammarError < RuleError
-    def initialize(element = nil)
-      super("Rule selector#{element.nil? ? "" : " #{element}"} not valid in current position")
-    end
-  end
-  class PseudoClassError < RuleError
-    def initialize(msg = "invalid pseudo-class", argument: nil, method: nil)
-      if argument.nil? && method.nil?
-        super(msg)
-      elsif argument.nil?
-        super("invalid pseudo-class '#{method}'")
-      else
-        super("argument '#{argument}' invalid for pseudo-class '#{method}'")
-      end
-    end
-  end
-  class PseudoElementError < RuleError
-    def initialize(msg = "invalid pseudo-element", argument: nil, method: nil)
-      if argument.nil? && method.nil?
-        super(msg)
-      elsif argument.nil?
-        super("invalid pseudo-element '#{method}'")
-      else
-        super("argument '#{argument}' invalid for pseudo-element '#{method}'")
-      end
-    end
-  end
-  class AttributeError < CSSError
-  end
 
   class Rule
     def initialize(parent, name = "", previous: nil)
@@ -385,7 +352,6 @@ class CSSNative
         parent = @controller.instance_variable_get(:@parent)        
         selector = @controller.instance_variable_get(:@selector)
         previous = @controller.instance_variable_get(:@previous)
-        puts previous
         
         Rule.new(parent, selector, previous: previous)
       end
