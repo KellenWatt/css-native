@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.license = "MIT"
   s.description = "A CSS generator designed to make writing CSS-compatible code cleaner and easier to undestand"
   s.date = Date.today.strftime("%Y-%m-%d")
-  s.homepage = ""
+  s.homepage = "https://github.com/KellenWatt/css-native"
   s.metadata = {}
   
   
