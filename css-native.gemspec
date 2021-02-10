@@ -3,15 +3,14 @@ Gem::Specification.new do |s|
   # Required
   s.name = "css-native"
   s.version = "0.0.1"
-  s.summary = ""
+  s.summary = "CSS generation made cleaner"
   s.author = "Kellen Watt"
   s.files = Dir["lib/**/*"]
   
   # Recommended
-  s.license = ""
-  s.description = ""
+  s.license = "MIT"
+  s.description = "A CSS generator designed to make writing CSS-compatible code cleaner and easier to undestand"
   s.date = Date.today.strftime("%Y-%m-%d")
-  s.email = ""
   s.homepage = ""
   s.metadata = {}
   
