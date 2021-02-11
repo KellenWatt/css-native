@@ -87,6 +87,7 @@ class Numeric
    :vmax, :px, :pt, :pc, :in, :Q, :mm, :cm].each do |m|
     define_method(m) {"#{self}#{m}"}
   end
+
   def pct
     "#{self}%"
   end

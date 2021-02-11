@@ -85,7 +85,7 @@ class CSSNative
 
     def combinator(c)
       m = c.to_sym
-      raise GrammarError.new(COMBINATORS[m]) if previous_combinator?
+      raise GrammarError.new(COMBINATORS[m].strip) if previous_combinator?
       @previous = :combinator
       @selector += COMBINATORS[m]
       self
@@ -205,7 +205,10 @@ class CSSNative
       @previous = :pseudo_element
       @selector += "::#{pe}"
       @selector += "(#{args.join(" ")})" unless args.empty?
-      chain(&block)
+
+      # Not "chain" because a pseudo-element is always the final selector
+      @stylesheet.instance_exec(@stylesheet, &block)
+      @parent.rules << to_s 
     end
 
     def method_missing(m, *args, &block)
