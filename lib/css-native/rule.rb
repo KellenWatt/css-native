@@ -5,59 +5,42 @@ class CSSNative
       @previous = previous
       @parent = parent
       @selector = name.to_s
-      @body = {}
       @stylesheet = Stylesheet.new(self)
     end
 
     # basic selectors
+    def with_element(name, &block)
+      raise GrammarError.new(name) if previous_selector?
+      @previous = :element
+      @selector += CSSNative::format_element(name)
+      chain(&block)
+    end
+
     def with_class(name, &block)
-      s = CSSNative::format_class(name)
       @previous = :class
-      @selector += s
-      if block_given?
-        @stylesheet.instance_exec(@stylesheet, &block)
-        @parent.rules << to_s
-      else
-        self
-      end
+      @selector += CSSNative::format_class(name)
+      chain(&block)
     end
 
     def with_id(name, &block)
-      s = CSSNative::format_id(name)
       @previous = :id
-      @selector += s
-      if block_given?
-        @stylesheet.instance_exec(@stylesheet, &block)
-        @parent.rules << to_s
-      else
-        self
-      end
+      @selector += CSSNative::format_id(name)
+      chain(&block)
     end
 
     def with_attribute(name, operation = :none, value = nil, case_sensitive: true, &block)
-      s = CSSNative::format_attribute(name, operation, value, case_sensitive: case_sensitive)
-      @previous = :attr
-      @selector += s
-      if block_given?
-        @stylesheet.instance_exec(@stylesheet, &block)
-        @parent.rules << to_s
-      else
-        self
-      end
+      @previous = :attribute
+      @selector += CSSNative::format_attribute(name, operation, value, case_sensitive: case_sensitive)
+      chain(&block)
     end
 
     def with(name, *args, type: :element, &block)
       case type
       when :element
-        name = (name == :all ? "*" : name.to_s)
-        raise GrammarError.new(name) if previous_selector?
-        @previous = (name == :all ? :all : :element)
-        @selector += name
-        if block_given?
-          @stylesheet.instance_exec(@stylesheet, &block)
-          @parent.rules << to_s
+        if name == :all
+          all(&block)
         else
-          self
+          with_element(name, &block)
         end
       when :class
         with_class(name, &block)
@@ -75,12 +58,7 @@ class CSSNative
       raise GrammarError.new("*") if previous_selector?
       @previous = :all
       @selector += "*"
-      if block_given?
-        @stylesheet.instance_exec(@stylesheet, &block)
-        @parent.rules << to_s
-      else
-        self
-      end
+      chain(&block)
     end
 
     # Grouping selectors
@@ -107,7 +85,7 @@ class CSSNative
 
     def combinator(c)
       m = c.to_sym
-      raise GrammarError.new(COMBINATORS[]) if previous_combinator?
+      raise GrammarError.new(COMBINATORS[m]) if previous_combinator?
       @previous = :combinator
       @selector += COMBINATORS[m]
       self
@@ -179,19 +157,17 @@ class CSSNative
       pc = name.to_s.gsub("_", "-")
       m = name.to_s.gsub("-", "_").to_sym
       raise PseudoClassError.new(method: pc) unless PSEUDO_CLASSES.key?(m)
-      arg_defs = PSEUDO_CLASSES[m]
+
+      args.each? do |arg|
+        unless matches_arg_defs?(PSEUDO_CLASSES[m], arg.to_s)
+          raise PseudoClassError.new(argument: arg, method: pc)
+        end
+      end
+      
       @previous = :pseudo_class
-      args.all? do |arg|
-        raise PseudoClassError.new(argument: arg, method: pc) unless matches_arg_defs?(arg_defs, arg.to_s)
-      end
-      @selector += ":" + pc
+      @selector += ":#{pc}"
       @selector += "(#{args.join(" ")})" unless args.empty?
-      if block_given?
-        @stylesheet.instance_exec(@stylesheet, &block)
-        @parent.rules << to_s
-      else
-        self
-      end
+      chain(&block)
     end
 
     # pseudo-elements
@@ -219,19 +195,17 @@ class CSSNative
       pe = name.to_s.gsub("_", "-")
       m = name.to_s.gsub("-", "_").to_sym
       raise PseudoElementError.new(method: pe) unless PSEUDO_ELEMENTS.key?(m)
-      arg_defs = PSEUDO_ELEMENTS[m]
-      @previous = :pseudo_element
-      args.all? do |arg|
-        raise PseudoElementError.new(argument: arg, method: ps) unless matches_arg_defs?(arg_defs, arg.to_s) 
+     
+      args.each? do |arg|
+        unless matches_arg_defs?(PSEUDO_ELEMENTS[m], arg.to_s)
+          raise PseudoElementError.new(argument: arg, method: pe)
+        end
       end
-      @selector += "::" + pe
+      
+      @previous = :pseudo_element
+      @selector += "::#{pe}"
       @selector += "(#{args.join(" ")})" unless args.empty?
-      if block_given?
-        @stylesheet.instance_exec(@stylesheet, &block)
-        @parent.rules << to_s
-      else
-        self
-      end 
+      chain(&block)
     end
 
     def method_missing(m, *args, &block)
@@ -271,13 +245,22 @@ class CSSNative
       previous?(:element, :class, :id, :attribute, :all, :pseudo_class, :pseudo_element)
     end
 
+    # If a block is given, executes that as a stylesheet. Otherwise, returns self to 
+    # facilitate chaining
+    def chain(&block)
+      if block_given?
+        @stylesheet.instance_exec(@stylesheet, &block)
+        @parent.rules << to_s 
+      else  
+        self
+      end
+    end
+
     def matches_arg_defs?(defs, arg)
       if defs.nil?
         arg.nil?
-      elsif defs.empty?
-        true
       else
-        defs.any? {|d| d === arg}
+        defs.empty? || defs.any? {|d| d === arg}
       end
     end
   end

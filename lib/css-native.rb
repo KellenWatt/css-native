@@ -9,6 +9,10 @@ class CSSNative
     sheet
   end
   
+  def self.format_element(name)
+    name.to_s
+  end
+
   def self.format_class(name)
     ".#{name}"
   end
@@ -35,6 +39,10 @@ class CSSNative
   attr_reader :rules
   def initialize
     @rules = []
+  end
+
+  def element(name)
+    Rule.new(self).with_element(name)
   end
 
   alias_method :klass, :class
