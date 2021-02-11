@@ -59,7 +59,7 @@ class CSSNative
   end
   
   def attribute(name, operation = :none, value = nil, case_sensitive: true)
-      Rule.new(self).with_attribute(name, *args)
+      Rule.new(self).with_attribute(name, operation, value, case_sensitive: case_sensitive)
   end
 
   def select(name, *args, type: :element)
