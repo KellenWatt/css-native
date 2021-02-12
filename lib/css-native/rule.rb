@@ -12,25 +12,25 @@ class CSSNative
     def with_element(name, &block)
       raise SelectorError.new(element: name, previous: @previous) if previous_selector?
       @previous = :element
-      @selector += CSSNative::format_element(name)
+      @selector += format_element(name)
       chain(&block)
     end
 
     def with_class(name, &block)
       @previous = :class
-      @selector += CSSNative::format_class(name)
+      @selector += format_class(name)
       chain(&block)
     end
 
     def with_id(name, &block)
       @previous = :id
-      @selector += CSSNative::format_id(name)
+      @selector += format_id(name)
       chain(&block)
     end
 
     def with_attribute(name, operation = :none, value = nil, case_sensitive: true, &block)
       @previous = :attribute
-      @selector += CSSNative::format_attribute(name, operation, value, case_sensitive: case_sensitive)
+      @selector += format_attribute(name, operation, value, case_sensitive: case_sensitive)
       chain(&block)
     end
 
@@ -265,6 +265,33 @@ class CSSNative
       else
         defs.empty? || defs.any? {|d| d === arg}
       end
+    end
+    
+    def format_element(name)
+      name.to_s
+    end
+
+    def format_class(name)
+      ".#{name}"
+    end
+
+    def format_id(name)
+      "##{name}"
+    end
+
+    def format_attribute(name, operation = :none, value = nil, case_sensitive: true)
+      op = case operation.to_sym
+           when :none        then ""
+           when :equals      then "="
+           when :include     then "~="
+           when :matches     then "|="
+           when :starts_with then "^="
+           when :ends_with   then "$="
+           when :contains    then "*="
+           else
+             raise AttributeComparisonError.new(operation: operation)
+           end
+      "[#{name}#{op}#{value.nil? ? "" : "\"#{value}\""}#{case_sensitive ? "" : " i"}]"
     end
   end
 end

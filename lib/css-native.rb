@@ -9,33 +9,6 @@ class CSSNative
     sheet
   end
   
-  def self.format_element(name)
-    name.to_s
-  end
-
-  def self.format_class(name)
-    ".#{name}"
-  end
-
-  def self.format_id(name)
-    "##{name}"
-  end
-
-  def self.format_attribute(name, operation = :none, value = nil, case_sensitive: true)
-    op = case operation.to_sym
-         when :none        then ""
-         when :equals      then "="
-         when :include     then "~="
-         when :matches     then "|="
-         when :starts_with then "^="
-         when :ends_with   then "$="
-         when :contains    then "*="
-         else
-           raise AttributeComparisonError.new(operation: operation)
-         end
-    "[#{name}#{op}#{value.nil? ? "" : "\"#{value}\""}#{case_sensitive ? "" : " i"}]"
-  end
-
   attr_reader :rules
   def initialize
     @rules = []
@@ -73,7 +46,7 @@ class CSSNative
     when :attribute
       attribute(name, *args)
     else
-      raise RuleError.new(type)
+      raise RuleError.new(rule: type)
     end
   end
 
