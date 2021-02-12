@@ -1,13 +1,39 @@
 class CSSNative
   class CSSError < StandardError
+    def initialize(msg = "Invalid CSS")
+      super(msg)
+    end
   end
   
   class RuleError < CSSError
+    def initialize(msg = "Invalid rule type", rule: nil)
+      if rule.nil?
+        super(msg)
+      else
+        super("Invalid rule type '#{rule}'")
+      end
+    end
   end
   
-  class GrammarError < RuleError
-    def initialize(element = nil)
-      super("Rule selector#{element.nil? ? "" : " #{element}"} not valid in current position")
+  class AttributeComparisonError < CSSError
+    def initialize(msg = "Invalid attrubute comparison", comparison: nil)
+      if comparison.nil?
+        super(msg)
+      else
+        super(msg + " '#{comparison}'")
+      end
+    end
+  end
+  
+  class SelectorError < RuleError
+    def initialize(msg = "Selector not valid", element: nil, previous: nil)
+      if element.nil? && previous.nil?
+        super(msg)
+      elsif previous.nil?
+        super("Selector '#{element}' not valid")
+      else
+        super("Selector '#{element}' not valid after '#{previous}' selector part")
+      end
     end
   end
   
@@ -33,8 +59,5 @@ class CSSNative
         super("argument '#{argument}' invalid for pseudo-element '#{method}'")
       end
     end
-  end
-
-  class AttributeError < CSSError
   end
 end

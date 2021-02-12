@@ -10,7 +10,7 @@ class CSSNative
 
     # basic selectors
     def with_element(name, &block)
-      raise GrammarError.new(name) if previous_selector?
+      raise SelectorError.new(element: name, previous: @previous) if previous_selector?
       @previous = :element
       @selector += CSSNative::format_element(name)
       chain(&block)
@@ -49,13 +49,13 @@ class CSSNative
       when :attribute
         with_attribute(name, *args, &block)
       else
-        raise CSSNative::RuleError.new("undefined rule type '#{type}' for css selector")
+        raise RuleError.new("undefined rule type '#{type}' for css selector")
       end
     end
     alias_method :select, :with
 
     def all(&block)
-      raise GrammarError.new("*") if previous_selector?
+      raise SelectorError.new(element: "*", previous: @previous) if previous_selector?
       @previous = :all
       @selector += "*"
       chain(&block)
@@ -63,7 +63,7 @@ class CSSNative
 
     # Grouping selectors
     def join(rule = nil)
-      raise GrammarError.new(",") if previous_combinator?
+      raise SelectorError.new(element: ",", previous: @previous) if previous_combinator?
       @previous = :join
       @selector += ","
       if rule.kind_of? Rule
@@ -85,7 +85,7 @@ class CSSNative
 
     def combinator(c)
       m = c.to_sym
-      raise GrammarError.new(COMBINATORS[m].strip) if previous_combinator?
+      raise SelectorError.new(element: COMBINATORS[m].strip, previous: @previous) if previous_combinator?
       @previous = :combinator
       @selector += COMBINATORS[m]
       self

@@ -31,7 +31,7 @@ class CSSNative
          when :ends_with   then "$="
          when :contains    then "*="
          else
-           raise AttributeError.new("undefined comparison '#{operation}' for css attribute selector")
+           raise AttributeComparisonError.new(operation: operation)
          end
     "[#{name}#{op}#{value.nil? ? "" : "\"#{value}\""}#{case_sensitive ? "" : " i"}]"
   end
@@ -73,7 +73,7 @@ class CSSNative
     when :attribute
       attribute(name, *args)
     else
-      raise RuleError.new("undefined rule type '#{type}' for css selector")
+      raise RuleError.new(type)
     end
   end
 
