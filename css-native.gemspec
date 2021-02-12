@@ -2,7 +2,7 @@ require "date"
 Gem::Specification.new do |s|
   # Required
   s.name = "css-native"
-  s.version = "0.1.2"
+  s.version = "0.1.3"
   s.summary = "CSS generation made cleaner"
   s.author = "Kellen Watt"
   s.files = Dir["lib/**/*"]
