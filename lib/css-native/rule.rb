@@ -1,4 +1,5 @@
 require "css-native/rule/stylesheet"
+require "css-native/rule/constants"
 class CSSNative
   class Rule
     def initialize(parent, name = "", previous: nil)
@@ -10,27 +11,23 @@ class CSSNative
 
     # basic selectors
     def with_element(name, &block)
-      raise SelectorError.new(element: name, previous: @previous) if previous_selector?
-      @previous = :element
-      @selector += format_element(name)
+      selector_error(name) if previous_selector?
+      append_selector(format_element(name), :element)
       chain(&block)
     end
 
     def with_class(name, &block)
-      @previous = :class
-      @selector += format_class(name)
+      append_selector(format_class(name), :class)
       chain(&block)
     end
 
     def with_id(name, &block)
-      @previous = :id
-      @selector += format_id(name)
+      append_selector(format_id(name), :id)
       chain(&block)
     end
 
-    def with_attribute(name, operation = :none, value = nil, case_sensitive: true, &block)
-      @previous = :attribute
-      @selector += format_attribute(name, operation, value, case_sensitive: case_sensitive)
+    def with_attribute(name, op = :none, value = nil, case_sensitive: true, &block)
+      append_selector(format_attribute(name, op, value, case_sensitive: case_sensitive), :attribute)
       chain(&block)
     end
 
@@ -55,160 +52,62 @@ class CSSNative
     alias_method :select, :with
 
     def all(&block)
-      raise SelectorError.new(element: "*", previous: @previous) if previous_selector?
-      @previous = :all
-      @selector += "*"
+      selector_error("*") if previous_selector?
+      append_selector("*", :all)
       chain(&block)
     end
 
     # Grouping selectors
-    def join(rule = nil)
-      raise SelectorError.new(element: ",", previous: @previous) if previous_combinator?
-      @previous = :join
-      @selector += ","
+    def join(rule = nil, &block)
+      raise JoinError unless rule.kind_of?(Rule) || rule.nil?
+      selector_error(",") if previous_combinator?
+
       if rule.kind_of? Rule
-        @selector += rule.instance_variable_get(:@selector)
+        selector = rule.instance_variable_get(:@selector)
+        previous = rule.instance_variable_get(:@previous)
+
+        append_selector("," + selector, previous)
+        previous_combinator? ? self : chain(&block)
       else
-        @selector += rule.to_s
+        append_selector(",", :join)
+        self
       end
-      self
     end
 
     # Combinators
-    COMBINATORS = {
-      descendant: " ",
-      child: " > ",
-      sibling: " + ",
-      adjacent: " + ",
-      column: " || "
-    }
-
     def combinator(c)
       m = c.to_sym
-      raise SelectorError.new(element: COMBINATORS[m].strip, previous: @previous) if previous_combinator?
-      @previous = :combinator
-      @selector += COMBINATORS[m]
+      selector_error(COMBINATORS[m].strip) if previous_combinator?
+      append_selector(COMBINATORS[m], :combinator)
       self
     end
 
-    # pseudo-classes
-    # name of value is pseudo-class, array values are acceptad options
-    #   Equality is compared by <option> === <value>, allowing 
-    #   classes to test for instances or regex matching
-    # If array is empty, there's no limitations (in the code, foraml CSS may differ)
-    # If array is nil, it takes no options
-    PSEUDO_CLASSES = {
-      # Linguistic
-      dir: ["ltr", "rtl"],
-      lang: [],
-      # Location
-      "any_link": nil,
-      link: nil,
-      visited: nil,
-      "local_link": nil,
-      target: nil,
-      "target_within": nil,
-      scope: nil,
-      # User action
-      hover: nil,
-      active: nil,
-      focus: nil,
-      "focus_visible": nil,
-      "focus_within": nil,
-      # Time_dimensional _ ill_defined
-      current: nil,
-      past: nil,
-      future: nil,
-      # Resource state
-      playing: nil,
-      paused: nil,
-      # Input
-      enabled: nil,
-      disabled: nil,
-      "read_only": nil,
-      "read_write": nil,
-      "placeholder_shown": nil,
-      default: nil,
-      checked: nil,
-      indeterminate: nil,
-      blank: nil,
-      valid: nil,
-      invalid: nil,
-      "in_range": nil,
-      "out_of_range": nil,
-      required: nil,
-      optional: nil,
-      "user_invalid": nil,
-      root: nil,
-      empty: nil,
-      "nth_child": ["odd", "even", /^\d+(n(\s*\+\s*\d+)?)?$/],
-      "nth_last_child": ["odd", "even", /^\d+(n(\s*\+\s*\d+)?)?$/],
-      "first_child": nil,
-      "last_child": nil,
-      "only_child": nil,
-      "nth_of_type": ["odd", "even", /^\d+(n(\s*\+\s*\d+)?)?$/],
-      "nth_last_of_type": ["odd", "even", /^\d+(n(\s*\+\s*\d+)?)?$/],
-      "first_of_type": nil,
-      "last_of_type": nil,
-      "only_of_type": nil,
-    }
-   
     def pseudo_class(name, *args, &block)
       pc = name.to_s.gsub("_", "-")
       m = name.to_s.gsub("-", "_").to_sym
       raise PseudoClassError.new(method: pc) unless PSEUDO_CLASSES.key?(m)
 
-      args.each? do |arg|
-        unless matches_arg_defs?(PSEUDO_CLASSES[m], arg.to_s)
-          raise PseudoClassError.new(argument: arg, method: pc)
-        end
+      unless args.all? {|arg| valid_arg?(PSEUDO_CLASSES[m], arg.to_s)}
+        raise PseudoClassError.new(argument: arg, method: pc) 
       end
       
-      @previous = :pseudo_class
-      @selector += ":#{pc}"
-      @selector += "(#{args.join(" ")})" unless args.empty?
+      selector = ":#{pc}" + (args.empty? ? "" : "(#{args.join(" ")})")
+      append_selector(selector, :pseudo_class)
       chain(&block)
     end
-
-    # pseudo-elements
-    # definition semantics same as pseudo-classes
-    PSEUDO_ELEMENTS = {
-      after: nil,
-      before: nil,
-      backdrop: nil,
-      cue: nil,
-      "cue_region": nil,
-      "first_letter": nil,
-      "first_line": nil,
-      "file_selector_button": nil,
-      "grammar_error": nil,
-      marker: nil,
-      part: [/[-a-zA-Z]+( [-a-zA-Z]+)?/],
-      placeholder: nil,
-      selection: nil,
-      slotted: [],
-      "spelling_error": nil,
-      "target_text": nil,
-    }
 
     def pseudo_element(name, *args, &block)
       pe = name.to_s.gsub("_", "-")
       m = name.to_s.gsub("-", "_").to_sym
       raise PseudoElementError.new(method: pe) unless PSEUDO_ELEMENTS.key?(m)
      
-      args.each? do |arg|
-        unless matches_arg_defs?(PSEUDO_ELEMENTS[m], arg.to_s)
-          raise PseudoElementError.new(argument: arg, method: pe)
-        end
+      unless args.all? {|arg| valid_arg?(PSEUDO_ELEMENTS[m], arg.to_s)}
+        raise PseudoElementError.new(argument: arg, method: pe)
       end
-      
-      @previous = :pseudo_element
-      @selector += "::#{pe}"
-      @selector += "(#{args.join(" ")})" unless args.empty?
 
-      # Not "chain" because a pseudo-element is always the final selector
-      @stylesheet.instance_exec(@stylesheet, &block)
-      @parent.rules << to_s 
+      selector = "::#{pe}" + (args.empty? ? "" : "(#{args.join(" ")})")
+      append_selector(selector, :pseudo_element)
+      chain(&block)
     end
 
     def method_missing(m, *args, &block)
@@ -259,7 +158,16 @@ class CSSNative
       end
     end
 
-    def matches_arg_defs?(defs, arg)
+    def append_selector(item, symbol)
+      @selector += item
+      @previous = symbol
+    end
+
+    def selector_error(name)
+      raise SelectorError.new(element: name, previous: @previous)
+    end
+
+    def valid_arg?(defs, arg)
       if defs.nil?
         arg.nil?
       else
@@ -280,6 +188,9 @@ class CSSNative
     end
 
     def format_attribute(name, operation = :none, value = nil, case_sensitive: true)
+      # Other case not possible because of positional arguments
+      raise AttributeError if operation != :none && value.nil?
+
       op = case operation.to_sym
            when :none        then ""
            when :equals      then "="

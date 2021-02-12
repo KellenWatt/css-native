@@ -14,8 +14,14 @@ class CSSNative
       end
     end
   end
-  
-  class AttributeComparisonError < CSSError
+
+  class AttributeError < CSSError
+    def initialize(msg = "Invalid attribute structure")
+      super(msg)
+    end
+  end
+
+  class AttributeComparisonError < AttributeError
     def initialize(msg = "Invalid attrubute comparison", comparison: nil)
       if comparison.nil?
         super(msg)
@@ -36,7 +42,12 @@ class CSSNative
       end
     end
   end
-  
+
+  class JoinError < RuleError
+    def initialize(msg = "Cannot join a rule to a non-rule")
+      super(msg)
+    end
+  end  
   class PseudoClassError < RuleError
     def initialize(msg = "invalid pseudo-class", argument: nil, method: nil)
       if argument.nil? && method.nil?
