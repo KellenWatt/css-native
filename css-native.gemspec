@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   
   
   # Optional and situational - delete or keep, as necessary
-  # s.bindir = "bin"
-  # s.executables = []
+  s.bindir = "bin"
+  s.executables = ["css-native"]
   # s.required_ruby_version = ">= 2.5" # Sensible default
 end

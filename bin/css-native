@@ -1,0 +1,37 @@
+#! /usr/bin/env ruby
+#
+require "css-native"
+require "optparse"
+
+options = {}
+
+exit if ARGV.empty?
+
+OptionParser.new do |opts|
+  opts.define("--output FILE", "-o FILE", "Write output to FILE") 
+end.parse!(into: options)
+
+if ARGV.empty?
+  puts "No css-native files provided"
+  exit 1
+end
+
+output = []
+
+ARGV.each do |file_name|
+  File.open(file_name, "r") do |file|
+    contents = file.read
+    sheet = CSSNative.stylesheet do
+      eval(contents)
+    end
+    output << "/*---#{file_name}---*/\n" + sheet.to_s
+  end
+end
+
+if options[:output].nil?
+  puts output.join("\n")
+else
+  File.open(options[:output], "w") do |file|
+    file.puts output.join("\n")
+  end
+end
