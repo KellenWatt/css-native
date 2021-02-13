@@ -14,37 +14,37 @@ class CSSNative
     @rules = []
   end
 
-  def element(name)
-    Rule.new(self).with_element(name)
+  def element(name, &block)
+    Rule.new(self).with_element(name, &block)
   end
 
   alias_method :klass, :class
-  def class(name = nil)
+  def class(name = nil, &block)
     if name.nil?
       klass
     else
-      Rule.new(self).with_class(name)
+      Rule.new(self).with_class(name, &block)
     end
   end
 
-  def id(name)
-      Rule.new(self).with_id(name)
+  def id(name, &block)
+      Rule.new(self).with_id(name, &block)
   end
   
-  def attribute(name, operation = :none, value = nil, case_sensitive: true)
-      Rule.new(self).with_attribute(name, operation, value, case_sensitive: case_sensitive)
+  def attribute(name, operation = :none, value = nil, case_sensitive: true, &block)
+      Rule.new(self).with_attribute(name, operation, value, case_sensitive: case_sensitive, &block)
   end
 
-  def select(name, *args, type: :element)
+  def select(name, *args, type: :element, &block)
     case type
     when :element
-      Rule.new(self).with(name)
+      Rule.new(self).with(name, &block)
     when :class
-      self.class(name)
+      self.class(name, &block)
     when :id
-      id(name)
+      id(name, &block)
     when :attribute
-      attribute(name, *args)
+      attribute(name, *args, &block)
     else
       raise RuleError.new(rule: type)
     end
